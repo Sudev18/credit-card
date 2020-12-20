@@ -4,6 +4,8 @@ Credit Card Fraud Detection algorithm using smote , confusion matrix, correlatio
 # -*- coding: utf-8 -*-
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 Created on Thu Dec 10 17:02:55 2020
 
@@ -11,7 +13,6 @@ Created on Thu Dec 10 17:02:55 2020
 CREDIT CARD FRAUD DETECTION
 Data sets from https://www.kaggle.com/mlg-ulb/creditcardfraud
 """
-
 
 import numpy as np # linear algebra
 import pandas as pd # data processing, CSV file I/O
@@ -28,26 +29,26 @@ from sklearn.metrics import plot_confusion_matrix
 from mpl_toolkits.mplot3d import Axes3D
 from sklearn.preprocessing import StandardScaler
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.metrics import precision_score, recall_score, f1_score, roc_auc_score, roc_curve, accuracy_score, precision_recall_curve, classification_report, confusion_matrix
 
 from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import IsolationForest
+
 #from xgboost import XGBClassifier
 
 # Other Libraries
 from imblearn.pipeline import make_pipeline as imbalanced_make_pipeline
 from imblearn.under_sampling import TomekLinks
-from imblearn.over_sampling import SMOTE
 from imblearn.under_sampling import NearMiss
 from imblearn.metrics import classification_report_imbalanced
 from sklearn.pipeline import make_pipeline
-from sklearn.ensemble import IsolationForest
 from sklearn.neighbors import LocalOutlierFactor
 from sklearn.svm import OneClassSVM
 from sklearn.utils import resample
-from sklearn.metrics import precision_score, recall_score, f1_score, roc_auc_score, roc_curve, accuracy_score, precision_recall_curve, classification_report, confusion_matrix
 from sklearn.preprocessing import StandardScaler, RobustScaler, LabelEncoder
 from sklearn.model_selection import cross_val_score, cross_val_predict, GridSearchCV, KFold, StratifiedKFold, train_test_split
 from sklearn.manifold import TSNE
@@ -191,6 +192,64 @@ def preprocessing(X,y):
 
     X_train.head()
     return X_train, X_test, y_train, y_test
+def distribution():  
+    
+    raw_df= data
+    cleaned_df = raw_df.copy()
+
+    # You don't want the `Time` column.
+    cleaned_df.pop('Time')
+
+    # The `Amount` column covers a huge range. Convert to log-space.
+    eps=0.001 # 0 => 0.1¢
+    cleaned_df['Log Ammount'] = np.log(cleaned_df.pop('Amount')+eps)
+    
+    # Use a utility from sklearn to split and shuffle our dataset.
+    train_df, test_df = train_test_split(cleaned_df, test_size=0.2)
+    train_df, val_df = train_test_split(train_df, test_size=0.2)
+    
+    # Form np arrays of labels and features.
+    train_labels = np.array(train_df.pop('Class'))
+    bool_train_labels = train_labels != 0
+    val_labels = np.array(val_df.pop('Class'))
+    test_labels = np.array(test_df.pop('Class'))
+    
+    train_features = np.array(train_df)
+    val_features = np.array(val_df)
+    test_features = np.array(test_df)
+   
+    scaler = StandardScaler()
+    train_features = scaler.fit_transform(train_features)
+
+    val_features = scaler.transform(val_features)
+    test_features = scaler.transform(test_features)
+    
+    train_features = np.clip(train_features, -5, 5)
+    val_features = np.clip(val_features, -5, 5)
+    test_features = np.clip(test_features, -5, 5)
+    
+    
+    print('Training labels shape:', train_labels.shape)
+    print('Validation labels shape:', val_labels.shape)
+    print('Test labels shape:', test_labels.shape)
+    
+    print('Training features shape:', train_features.shape)
+    print('Validation features shape:', val_features.shape)
+    print('Test features shape:', test_features.shape)
+    pos_df = pd.DataFrame(train_features[ bool_train_labels], columns = train_df.columns)
+    neg_df = pd.DataFrame(train_features[~bool_train_labels], columns = train_df.columns)
+
+    sns.jointplot(pos_df['V5'], pos_df['V6'],
+                  kind='hex', xlim = (-5,5), ylim = (-5,5))
+    plt.suptitle("Positive distribution")
+    
+    sns.jointplot(neg_df['V5'], neg_df['V6'],
+                  kind='hex', xlim = (-5,5), ylim = (-5,5))
+    _ = plt.suptitle("Negative distribution")    
+        
+ 
+    
+
     
 def using_smote(X_train, X_test, y_train, y_test):   
 
@@ -400,11 +459,14 @@ print(f'There are {nRow} rows and {nCol} columns')
 
 #FUNCTION CALL
 
+
+
+
 imbalance()
 X_train, X_test, y_train, y_test=preprocessing(X,y)
 k,X_test, y_test, X_train_res, y_train_res=using_smote(X_train, X_test, y_train, y_test)
-
 data_visualisation()
+distribution()
 plotCorrelationMatrix()
 plotScatterMatrix(df1, 20, 10)
 
